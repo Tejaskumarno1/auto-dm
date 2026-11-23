@@ -11,9 +11,9 @@ export const PASSWORD_MIN_LENGTH = 12;
 /** Follow gate (button template text limit is 640). */
 export const FOLLOW_GATE_TEXT_MAX = 640;
 export const DEFAULT_FOLLOW_GATE_MESSAGE =
-  "Hai {username}! Follow akun kami dulu ya, lalu klik tombol di bawah untuk mendapatkan link-nya.";
-export const DEFAULT_FOLLOW_GATE_BUTTON_TITLE = "Saya sudah follow";
+  "Hey {username}! Follow this account first, then tap the button below to get your link.";
+export const DEFAULT_FOLLOW_GATE_BUTTON_TITLE = "I've followed";
 export const DEFAULT_FOLLOW_GATE_RETRY_MESSAGE =
-  "Sepertinya kamu belum follow kami. Follow dulu ya, lalu klik tombol di bawah lagi.";
+  "You haven't followed yet. Please follow this account, then tap the button below again to get your link.";
 /** Postback payload prefix for follow gate buttons: `fg:<deliveryId>`. */
 export const FOLLOW_GATE_PAYLOAD_PREFIX = "fg:";

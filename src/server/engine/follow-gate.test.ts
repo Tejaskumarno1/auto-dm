@@ -135,7 +135,7 @@ describe("handleFollowGatePostback", () => {
     expect(state.status).toBe("pending");
   });
 
-  it("follow check error: fails open and sends the link", async () => {
+  it("follow check error: fails closed, says so honestly and does not send the link", async () => {
     const warn = vi.fn();
     const { deps, state } = setup({
       isFollowing: vi.fn(async () => {
@@ -143,10 +143,11 @@ describe("handleFollowGatePostback", () => {
       }),
     });
     await expect(handleFollowGatePostback(tap(), { deps, log: { ...silent, warn } })).resolves.toBe(
-      "unlocked_fail_open",
+      "not_verified",
     );
-    expect(deps.sendDirect).toHaveBeenCalledTimes(1);
-    expect(state.status).toBe("unlocked");
+    expect(deps.sendDirect).not.toHaveBeenCalled();
+    expect(deps.sendPostback).toHaveBeenCalledTimes(1);
+    expect(state.status).toBe("pending");
     // The token never reaches the log.
     expect(JSON.stringify(warn.mock.calls)).not.toContain("IGTOKEN_fake_123456");
   });

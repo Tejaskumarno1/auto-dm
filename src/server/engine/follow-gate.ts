@@ -21,9 +21,13 @@ import { renderTemplate, truncateText } from "./template";
 
 const rootLog = logger("follow_gate");
 
+/** Shown when Meta's follow check itself fails: honest, and the user can simply tap again. */
+const UNVERIFIED_MESSAGE =
+  "We couldn't verify your follow right now. Please make sure you follow this account, then tap the button again in a minute.";
+
 export type FollowGateOutcome =
   | "unlocked"
-  | "unlocked_fail_open"
+  | "not_verified"
   | "not_following"
   | "ignored_payload"
   | "ignored_not_found"
@@ -159,10 +163,10 @@ export function unlockedDm(
  * Handles a tap on a follow gate button (`messaging_postbacks`, payload `fg:<deliveryId>`).
  *
  * Checks the delivery is ours, pending and tapped by its commenter, then asks the User Profile API
- * whether the user follows us. Following (or the check failed: fail open) → claims the unlock
+ * whether the user follows us. Following → claims the unlock
  * atomically (`pending` → `unlocked`, so a double tap sends once) and sends the rule's normal DM to
  * `recipient: { id }` inside the 24h window the tap opened; on send failure the claim is reverted.
- * Not following → re-sends the retry text with the same button. Never throws.
+ * Not following, or the check failed (fail closed, with an honest message) → re-sends the retry text with the same button. Never throws.
  */
 export async function handleFollowGatePostback(
   event: PostbackEvent,
@@ -204,14 +208,14 @@ export async function handleFollowGatePostback(
     if (!rule) return done("ignored_rule_deleted", { deliveryId });
 
     token = deps.getToken(account);
-    let following: boolean;
-    let failOpen = false;
+    // Fail closed: the link is only sent once the follow is actually verified. If Meta's check
+    // fails, tell the user honestly and let them tap again; never pretend it was verified.
+    let following = false;
+    let verified = true;
     try {
       following = await deps.isFollowing(token, event.senderId);
     } catch (err) {
-      // Fail open: a Meta outage must not strand real followers.
-      following = true;
-      failOpen = true;
+      verified = false;
       log.warn("follow_gate.check_failed", { deliveryId, err: safeErrorMessage(err, [token]) });
     }
 
@@ -221,7 +225,9 @@ export async function handleFollowGatePostback(
         username: delivery.commenterUsername,
         keyword: templateKeyword(delivery.matchedKeyword ?? ""),
       };
-      const text = renderTemplate(gate.retryMessage, vars).trim() || gate.retryMessage;
+      const text = verified
+        ? renderTemplate(gate.retryMessage, vars).trim() || gate.retryMessage
+        : UNVERIFIED_MESSAGE;
       try {
         await deps.sendPostback(token, account.igUserId, event.senderId, {
           text,
@@ -231,7 +237,7 @@ export async function handleFollowGatePostback(
         log.warn("follow_gate.retry_send_failed", { deliveryId, err: safeErrorMessage(err, [token]) });
         return done("send_failed", { deliveryId });
       }
-      return done("not_following", { deliveryId });
+      return done(verified ? "not_following" : "not_verified", { deliveryId });
     }
 
     if (!(await deps.claimUnlock(deliveryId))) return done("ignored_not_pending", { deliveryId });
@@ -244,7 +250,7 @@ export async function handleFollowGatePostback(
       log.warn("follow_gate.unlock_send_failed", { deliveryId, err: safeErrorMessage(err, [token]) });
       return done("send_failed", { deliveryId });
     }
-    return done(failOpen ? "unlocked_fail_open" : "unlocked", { deliveryId });
+    return done("unlocked", { deliveryId });
   } catch (err) {
     log.error("follow_gate.error", { deliveryId, err: safeErrorMessage(err, [token]) });
     return done("send_failed", { deliveryId });

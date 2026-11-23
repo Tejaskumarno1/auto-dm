@@ -180,8 +180,8 @@ export async function subscribeToWebhooks(accessToken: string, igUserId: string)
   return (await subscribeWithDetails(accessToken, igUserId)).ok;
 }
 
-/** The comment automation currently needs only the Instagram `comments` webhook field. */
-export const WEBHOOK_SUBSCRIBED_FIELDS = "comments";
+/** Webhook fields we subscribe to: comments (engine) and postbacks (follow gate button). */
+export const WEBHOOK_SUBSCRIBED_FIELDS = "comments,messaging_postbacks";
 
 const subscribedAppsSchema = z.object({
   data: z.array(z.looseObject({ subscribed_fields: z.array(z.string()).optional() })).optional(),
