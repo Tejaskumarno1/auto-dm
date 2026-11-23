@@ -62,9 +62,10 @@ export async function POST(req: NextRequest) {
     });
     return res;
   }
-  const { entries, entryIds, events, postbacks } = inbound;
+  const { entries, entryIds, events, postbacks, unrecognized } = inbound;
   const durationMs = Date.now() - started;
   log.info("webhook.received", { entries, events: events.length, postbacks: postbacks.length, durationMs });
+  if (unrecognized.length > 0) log.info("webhook.unrecognized", { shape: unrecognized });
   after(async () => {
     await recordWebhookRequest({
       kind: "delivery",
