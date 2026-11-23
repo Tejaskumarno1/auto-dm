@@ -80,20 +80,23 @@ describe("ruleSchema follow gate", () => {
     expect(r.followGateButtonTitle).toBeNull();
     expect(r.followGateRetryMessage).toBeNull();
   });
-  it("rejects automated follow verification for Unified Login", () => {
-    const r = ruleSchema.safeParse({
+  it("trims texts and turns empty strings into null", () => {
+    const r = ruleSchema.parse({
       ...baseRule,
       followGateEnabled: true,
       followGateMessage: "  Follow us {username}  ",
       followGateButtonTitle: "   ",
       followGateRetryMessage: "",
     });
-    expect(r.success).toBe(false);
-    expect(r.error!.issues.some((i) => i.path.join(".") === "followGateEnabled")).toBe(true);
+    expect(r.followGateEnabled).toBe(true);
+    expect(r.followGateMessage).toBe("Follow us {username}");
+    expect(r.followGateButtonTitle).toBeNull();
+    expect(r.followGateRetryMessage).toBeNull();
   });
   it("enforces the 640-char text and 20-char button limits", () => {
     const res = ruleSchema.safeParse({
       ...baseRule,
+      followGateEnabled: true,
       followGateMessage: "x".repeat(FOLLOW_GATE_TEXT_MAX + 1),
       followGateButtonTitle: "y".repeat(DM_BUTTON_TITLE_MAX + 1),
       followGateRetryMessage: "z".repeat(FOLLOW_GATE_TEXT_MAX + 1),

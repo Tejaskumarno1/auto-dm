@@ -408,15 +408,15 @@ export function RuleForm({
               <div className="grid gap-0.5">
                 <Label htmlFor={f("gate")}>Require follow before the link is sent</Label>
                 <p id={f("gate-help")} className="text-muted-foreground text-xs">
-                  This feature is disabled for Unified Login because Meta&apos;s current documentation does not
-                  confirm that automated follower verification is supported for this token and event flow.
+                  The first DM asks the commenter to follow you and shows a button. The message and link above
+                  are sent only after they tap it and we confirm they follow you. If the follow check fails on
+                  Meta&apos;s side, the link is sent anyway.
                 </p>
               </div>
               <Switch
                 id={f("gate")}
                 checked={field.value}
                 onCheckedChange={field.onChange}
-                disabled={!field.value}
                 aria-describedby={f("gate-help")}
               />
             </div>

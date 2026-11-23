@@ -182,8 +182,8 @@ describe.skipIf(!TEST_DB)("follow gate (Postgres integration)", () => {
             type: "template",
             payload: {
               template_type: "button",
-              text: "Hai alice! Follow akun kami dulu ya, lalu klik tombol di bawah untuk mendapatkan link-nya.",
-              buttons: [{ type: "postback", title: "Saya sudah follow", payload: `fg:${res.deliveryId}` }],
+              text: "Hey alice! Follow this account first, then tap the button below to get your link.",
+              buttons: [{ type: "postback", title: "I've followed", payload: `fg:${res.deliveryId}` }],
             },
           },
         },
@@ -230,7 +230,7 @@ describe.skipIf(!TEST_DB)("follow gate (Postgres integration)", () => {
             payload: {
               template_type: "button",
               text: "Belum follow, alice",
-              buttons: [{ type: "postback", title: "Saya sudah follow", payload: `fg:${res.deliveryId}` }],
+              buttons: [{ type: "postback", title: "I've followed", payload: `fg:${res.deliveryId}` }],
             },
           },
         },
@@ -239,12 +239,12 @@ describe.skipIf(!TEST_DB)("follow gate (Postgres integration)", () => {
     expect((await row(res.deliveryId!)).followGateStatus).toBe("pending");
   });
 
-  it("follow check error: fails open", async () => {
+  it("follow check error: fails closed and does not unlock", async () => {
     await seed(true);
     const res = await m.engine.processCommentEvent(event(), { source: "webhook" });
     following = "error";
-    await expect(m.gate.handleFollowGatePostback(tap(res.deliveryId!))).resolves.toBe("unlocked_fail_open");
-    expect((await row(res.deliveryId!)).followGateStatus).toBe("unlocked");
+    await expect(m.gate.handleFollowGatePostback(tap(res.deliveryId!))).resolves.toBe("not_verified");
+    expect((await row(res.deliveryId!)).followGateStatus).toBe("pending");
   });
 
   it("sender mismatch and deleted rule are ignored", async () => {
