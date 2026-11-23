@@ -213,3 +213,32 @@ export function extractCommentEvents(payload: WebhookPayload): CommentEvent[] {
   }
   return events;
 }
+
+/**
+ * Token-free, content-free description of a webhook that produced no comment or postback event:
+ * field names, key names and the follow-gate payload prefix only. For diagnosing events we drop.
+ */
+export function describeUnrecognized(payload: WebhookPayload): string[] {
+  const out: string[] = [];
+  for (const entry of payload.entry) {
+    for (const c of entry.changes ?? []) out.push(`change:${c.field.slice(0, 40)}`);
+    for (const item of entry.messaging ?? []) {
+      const keys =
+        item && typeof item === "object" ? Object.keys(item as Record<string, unknown>).slice(0, 12) : [];
+      const pb = (item as { postback?: { payload?: unknown } } | null)?.postback;
+      const payloadKind =
+        typeof pb?.payload === "string"
+          ? pb.payload.startsWith(FOLLOW_GATE_PAYLOAD_PREFIX)
+            ? "fg"
+            : "other"
+          : pb
+            ? "no_payload"
+            : "none";
+      const sender = (item as { sender?: { id?: unknown } } | null)?.sender?.id;
+      out.push(
+        `messaging:${keys.join("+")} postback_payload=${payloadKind} sender_is_self=${String(sender) === entry.id}`,
+      );
+    }
+  }
+  return out.slice(0, 10);
+}

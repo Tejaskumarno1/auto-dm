@@ -256,3 +256,26 @@ describe("extractPostbackEvents", () => {
     expect(extractPostbackEvents(parseWebhookPayload(JSON.stringify(commentPayload))!)).toEqual([]);
   });
 });
+
+describe("describeUnrecognized", () => {
+  it("describes structure only, never content", async () => {
+    const { describeUnrecognized, parseWebhookPayload } = await import("./webhook");
+    const payload = parseWebhookPayload(
+      JSON.stringify({
+        object: "instagram",
+        entry: [
+          {
+            id: "111",
+            messaging: [{ sender: { id: "222" }, recipient: { id: "111" }, postback: { payload: "secret-text" } }],
+            changes: [{ field: "mentions", value: { text: "private words" } }],
+          },
+        ],
+      }),
+    )!;
+    const out = describeUnrecognized(payload).join("|");
+    expect(out).toContain("change:mentions");
+    expect(out).toContain("postback_payload=other");
+    expect(out).not.toContain("secret-text");
+    expect(out).not.toContain("private words");
+  });
+});

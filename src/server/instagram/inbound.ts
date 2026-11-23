@@ -5,6 +5,7 @@ import { noStore } from "./http";
 import {
   checkVerifyRequest,
   entryIds,
+  describeUnrecognized,
   extractCommentEvents,
   extractPostbackEvents,
   MAX_WEBHOOK_BODY_BYTES,
@@ -24,6 +25,8 @@ export interface AuthenticatedWebhook {
   events: CommentEvent[];
   /** Follow gate button taps (`messaging_postbacks`). */
   postbacks: PostbackEvent[];
+  /** Structure-only description when nothing was recognised (see `describeUnrecognized`). */
+  unrecognized: string[];
 }
 
 /** Why a webhook POST was rejected; recorded in `webhook_requests.result`. */
@@ -79,11 +82,14 @@ export async function authenticateWebhook(req: Request): Promise<AuthenticatedWe
   }
   const payload = parseWebhookPayload(raw);
   if (!payload) throw new WebhookRejectedError("invalid_payload", "VALIDATION", "Invalid webhook payload");
+  const events = extractCommentEvents(payload);
+  const postbacks = extractPostbackEvents(payload);
   return {
     entries: payload.entry.length,
     entryIds: entryIds(payload),
-    events: extractCommentEvents(payload),
-    postbacks: extractPostbackEvents(payload),
+    events,
+    postbacks,
+    unrecognized: events.length === 0 && postbacks.length === 0 ? describeUnrecognized(payload) : [],
   };
 }
 
