@@ -13,10 +13,10 @@ import { listApiKeys } from "@/server/api-keys";
 import { getActiveAccount } from "@/server/instagram/account";
 import { oauthRedirectUri } from "@/server/instagram/oauth";
 import { hasAnyDelivery } from "@/server/repos/deliveries";
-import { listWebhookRequests } from "@/server/repos/webhook-requests";
 import { getPublicSettings } from "@/server/settings";
 import { AccountTab } from "./account-tab";
 import { InstagramTab } from "./instagram-tab";
+import { WebhookDiagnosticsPanel } from "./webhook-diagnostics-panel";
 import { ProcessingTab } from "./processing-tab";
 import { RetentionCard } from "./retention-card";
 import { TimeZoneCard } from "./timezone-card";
@@ -29,6 +29,8 @@ const TABS = ["account", "instagram", "processing", "n8n", "about"] as const;
 
 const OAUTH_ERRORS: Record<string, string> = {
   missing_app_credentials: "Add your Meta App ID and App Secret first.",
+  missing_configuration: "Add your Facebook Login for Business configuration ID first.",
+  multiple_accounts: "This AutoDM setup connects one Instagram account. Share exactly one account in the Meta configuration, then reconnect.",
   access_denied: "Instagram authorization was cancelled.",
   invalid_state: "The connection request expired or was tampered with. Please try again.",
   missing_code: "Instagram didn't return an authorization code. Please try again.",
@@ -43,13 +45,12 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string; connected?: string; error?: string; warning?: string }>;
 }) {
   const user = await requireUser();
-  const [sp, settings, account, apiKeys, anyDelivery, webhookRequests] = await Promise.all([
+  const [sp, settings, account, apiKeys, anyDelivery] = await Promise.all([
     searchParams,
     getPublicSettings(),
     getActiveAccount(),
     listApiKeys(),
     hasAnyDelivery(),
-    listWebhookRequests(undefined, 60),
   ]);
 
   const flashes: Flash[] = [];
@@ -112,6 +113,7 @@ export default async function SettingsPage({
         <TabsContent value="instagram">
           <InstagramTab
             appId={settings["meta.appId"].value ?? ""}
+            configId={settings["meta.configId"].value ?? ""}
             appSecretConfigured={settings["meta.appSecret"].configured}
             account={
               account
@@ -121,6 +123,7 @@ export default async function SettingsPage({
                     profilePictureUrl: account.profilePictureUrl,
                     tokenExpiresAt: account.tokenExpiresAt,
                     tokenDaysLeft: account.tokenExpiresAt ? daysUntil(account.tokenExpiresAt) : null,
+                    tokenType: account.tokenType,
                   }
                 : null
             }
@@ -138,19 +141,15 @@ export default async function SettingsPage({
             contactConfigured={
               !!settings["general.operatorName"].value && !!settings["general.contactEmail"].value
             }
-            webhookRequests={webhookRequests.map((r) => ({
-              id: r.id,
-              kind: r.kind,
-              source: r.source,
-              result: r.result,
-              statusCode: r.statusCode,
-              entries: r.entries,
-              commentEvents: r.commentEvents,
-              matchedEntries: r.matchedEntries,
-              createdAt: r.createdAt,
-            }))}
-            subscription={settings["webhook.subscription"].value ?? null}
           />
+          <Suspense fallback={<p className="text-muted-foreground text-sm">Loading webhook diagnostics…</p>}>
+            <WebhookDiagnosticsPanel
+              accountConnected={!!account}
+              webhookUrl={`${base}/api/webhooks/instagram`}
+              mode={settings["processing.mode"].value ?? "webhook"}
+              subscription={settings["webhook.subscription"].value ?? null}
+            />
+          </Suspense>
         </TabsContent>
         <TabsContent value="processing">
           <div className="grid gap-6">

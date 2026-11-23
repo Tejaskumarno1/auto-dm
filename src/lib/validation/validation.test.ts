@@ -80,23 +80,20 @@ describe("ruleSchema follow gate", () => {
     expect(r.followGateButtonTitle).toBeNull();
     expect(r.followGateRetryMessage).toBeNull();
   });
-  it("trims texts and turns empty strings into null", () => {
-    const r = ruleSchema.parse({
+  it("rejects automated follow verification for Unified Login", () => {
+    const r = ruleSchema.safeParse({
       ...baseRule,
       followGateEnabled: true,
       followGateMessage: "  Follow us {username}  ",
       followGateButtonTitle: "   ",
       followGateRetryMessage: "",
     });
-    expect(r.followGateEnabled).toBe(true);
-    expect(r.followGateMessage).toBe("Follow us {username}");
-    expect(r.followGateButtonTitle).toBeNull();
-    expect(r.followGateRetryMessage).toBeNull();
+    expect(r.success).toBe(false);
+    expect(r.error!.issues.some((i) => i.path.join(".") === "followGateEnabled")).toBe(true);
   });
   it("enforces the 640-char text and 20-char button limits", () => {
     const res = ruleSchema.safeParse({
       ...baseRule,
-      followGateEnabled: true,
       followGateMessage: "x".repeat(FOLLOW_GATE_TEXT_MAX + 1),
       followGateButtonTitle: "y".repeat(DM_BUTTON_TITLE_MAX + 1),
       followGateRetryMessage: "z".repeat(FOLLOW_GATE_TEXT_MAX + 1),
@@ -237,8 +234,8 @@ describe("activityFiltersSchema", () => {
 
 describe("metaAppSchema", () => {
   it("allows a blank secret (keep stored) but validates a provided one", () => {
-    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "" }).success).toBe(true);
-    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "short" }).success).toBe(false);
-    expect(metaAppSchema.safeParse({ appId: "abc" }).success).toBe(false);
+    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "", configId: "123456789" }).success).toBe(true);
+    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "short", configId: "123456789" }).success).toBe(false);
+    expect(metaAppSchema.safeParse({ appId: "abc", configId: "123456789" }).success).toBe(false);
   });
 });

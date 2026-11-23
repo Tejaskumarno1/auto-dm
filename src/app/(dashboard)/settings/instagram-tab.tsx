@@ -53,8 +53,6 @@ import {
   revealVerifyTokenAction,
   saveMetaAppAction,
 } from "./actions";
-import { WebhookDiagnosticsCard, type WebhookRequestView } from "./webhook-diagnostics-card";
-import type { SubscriptionStatus } from "@/lib/webhook-diagnostics";
 
 type Account = {
   username: string;
@@ -63,6 +61,7 @@ type Account = {
   tokenExpiresAt: Date | null;
   /** Computed on the server so render stays pure. */
   tokenDaysLeft: number | null;
+  tokenType: string;
 };
 
 export type MetaReviewUrls = {
@@ -75,6 +74,7 @@ export type MetaReviewUrls = {
 
 export function InstagramTab(props: {
   appId: string;
+  configId: string;
   appSecretConfigured: boolean;
   account: Account | null;
   webhookUrl: string;
@@ -83,26 +83,18 @@ export function InstagramTab(props: {
   mode: "webhook" | "n8n";
   metaReview: MetaReviewUrls;
   contactConfigured: boolean;
-  webhookRequests: WebhookRequestView[];
-  subscription: SubscriptionStatus | null;
 }) {
-  const configured = !!props.appId && props.appSecretConfigured;
+  const configured = !!props.appId && !!props.configId && props.appSecretConfigured;
   return (
     <div className="grid max-w-3xl grid-cols-1 gap-6">
       <MetaAppCard
         appId={props.appId}
+        configId={props.configId}
         secretConfigured={props.appSecretConfigured}
         redirectUri={props.redirectUri}
       />
       <ConnectionCard account={props.account} configured={configured} />
       <WebhookCard webhookUrl={props.webhookUrl} receivedEvents={props.receivedEvents} mode={props.mode} />
-      <WebhookDiagnosticsCard
-        requests={props.webhookRequests}
-        subscription={props.subscription}
-        accountConnected={!!props.account}
-        webhookUrl={props.webhookUrl}
-        mode={props.mode}
-      />
       <MetaReviewCard urls={props.metaReview} contactConfigured={props.contactConfigured} />
     </div>
   );
@@ -144,16 +136,18 @@ function CopyField({
 
 function MetaAppCard({
   appId,
+  configId,
   secretConfigured,
   redirectUri,
 }: {
   appId: string;
+  configId: string;
   secretConfigured: boolean;
   redirectUri: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [values, setValues] = useState({ appId, appSecret: "" });
+  const [values, setValues] = useState({ appId, configId, appSecret: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
@@ -180,10 +174,10 @@ function MetaAppCard({
         <CardHeader>
           <CardTitle>Meta app</CardTitle>
           <CardDescription>
-            From developers.facebook.com → your app → Instagram → API setup with Instagram login.
+            From your Meta app&apos;s Unified Login setup and Facebook Login for Business configuration.
           </CardDescription>
           <CardAction>
-            {appId && secretConfigured ? (
+            {appId && configId && secretConfigured ? (
               <Badge variant="success">
                 <CheckCircle2 aria-hidden /> Configured
               </Badge>
@@ -197,7 +191,7 @@ function MetaAppCard({
         <CardContent className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="meta-app-id">Instagram App ID</Label>
+              <Label htmlFor="meta-app-id">Meta App ID</Label>
               <Input
                 id="meta-app-id"
                 inputMode="numeric"
@@ -210,8 +204,22 @@ function MetaAppCard({
               <FieldError id="meta-app-id-error" errors={errors.appId} />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="meta-config-id">Configuration ID</Label>
+              <Input
+                id="meta-config-id"
+                inputMode="numeric"
+                autoComplete="off"
+                value={values.configId}
+                onChange={(e) => setValues((v) => ({ ...v, configId: e.target.value }))}
+                aria-invalid={!!errors.configId}
+                aria-describedby={errors.configId ? "meta-config-id-error" : undefined}
+              />
+              <FieldError id="meta-config-id-error" errors={errors.configId} />
+              <p className="text-muted-foreground text-xs">The config ID is not a secret. It selects the saved Unified Login permissions and assets.</p>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="meta-app-secret" className="flex items-center gap-2">
-                Instagram App Secret
+                Meta App Secret
                 {secretConfigured ? (
                   <span className="text-success inline-flex items-center gap-1 text-xs font-normal">
                     <ShieldCheck className="size-3.5" aria-hidden /> stored encrypted
@@ -237,7 +245,7 @@ function MetaAppCard({
             id="oauth-redirect"
             label="OAuth redirect URI"
             value={redirectUri}
-            help="Add this under “Valid OAuth Redirect URIs” in the Instagram business login settings."
+            help="Add this as the Redirect URL for the same Facebook Login for Business configuration."
           />
         </CardContent>
         <CardFooter className="justify-end border-t">
@@ -261,7 +269,7 @@ function ConnectionCard({ account, configured }: { account: Account | null; conf
       <CardHeader>
         <CardTitle>Instagram account</CardTitle>
         <CardDescription>
-          A professional (Business or Creator) account. Tokens refresh automatically every day.
+          A professional (Business or Creator) account connected with Instagram API Unified Login.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -285,7 +293,9 @@ function ConnectionCard({ account, configured }: { account: Account | null; conf
                 <p className="text-muted-foreground text-xs">
                   {account.tokenExpiresAt
                     ? `Token valid until ${formatDateTime(account.tokenExpiresAt)}${daysLeft !== null ? ` (${daysLeft} days)` : ""}`
-                    : "Token expiry unknown"}
+                    : account.tokenType === "business_integration_system_user"
+                      ? "No scheduled expiry (Meta may revoke access; reconnect if API access is lost)"
+                      : "Legacy token: reconnect using Unified Login"}
                 </p>
               </div>
             </div>
@@ -480,7 +490,7 @@ function WebhookCard({
           </div>
         </div>
         <ol className="text-muted-foreground grid list-decimal gap-1.5 pl-5 text-sm marker:font-medium">
-          <li>In your Meta app open Instagram → API setup with Instagram login → Configure webhooks.</li>
+          <li>In your Meta app open Instagram → API setup with Unified login → Configure webhooks.</li>
           <li>Paste the callback URL and verify token, then click “Verify and save”.</li>
           <li>
             Subscribe to the <code className="text-foreground">comments</code> field.
@@ -570,8 +580,7 @@ function MetaReviewCard({ urls, contactConfigured }: { urls: MetaReviewUrls; con
               Business login settings
             </h3>
             <p className="text-muted-foreground text-xs">
-              Instagram → API setup with Instagram login → Set up Instagram business login → Business login
-              settings.
+              Facebook Login for Business settings for the Unified Login configuration.
             </p>
           </div>
           <CopyField

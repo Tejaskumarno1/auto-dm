@@ -3,7 +3,7 @@ import { z } from "zod";
 import { graphId, graphRequest } from "./graph";
 
 /**
- * Reading a post's comments (`GET /{ig-media-id}/comments`, Instagram API with Instagram Login) for
+ * Reading a post's comments (`GET /{ig-media-id}/comments`) for
  * "Check post for missed comments". Meta returns top-level comments newest first (API v3.2+), at
  * most 50 per page, and can't filter by time; replies are only included through the `replies`
  * field expansion, which we request inline (first page of replies per comment, no extra calls).

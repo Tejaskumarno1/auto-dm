@@ -47,7 +47,7 @@ Set these in `.env` (compose passes them to the container). Full list: [configur
 | -------------------------------------- | -------------------------------------------------------------------------------------- |
 | `APP_SECRET`                           | Required, 32+ chars. Back it up: losing it makes stored secrets unreadable.            |
 | `APP_URL`                              | Your public HTTPS URL, used for OAuth redirect and webhook URL.                        |
-| `CRON_SECRET`                          | Required for the daily token refresh sidecar.                                          |
+| `CRON_SECRET`                          | Required for the daily maintenance sidecar (including retention cleanup).              |
 | `DATABASE_URL`                         | Preset in compose to the bundled Postgres. Change the default password for production. |
 | `ADMIN_DEFAULT_USERNAME` / `_PASSWORD` | First-run login only.                                                                  |
 | `SKIP_MIGRATIONS=1`                    | Skip the automatic migration run at container start.                                   |
@@ -71,8 +71,9 @@ Consider binding the app port to localhost only (`"127.0.0.1:3000:3000"`) when a
 
 ## Cron sidecar
 
-On Vercel a cron job refreshes the 60-day Instagram token. In Docker the `cron` service (Alpine + crond)
-calls `/api/cron/refresh-tokens` daily at 03:17 with `Authorization: Bearer $CRON_SECRET`. Keep `CRON_SECRET`
+Unified Login Never-expiring SUATs are not refreshed by cron. In Docker the `cron` service (Alpine + crond)
+calls `/api/cron/refresh-tokens` daily at 03:17 with `Authorization: Bearer $CRON_SECRET` for maintenance
+and retention cleanup. Keep `CRON_SECRET`
 set, otherwise the route refuses the call. Check it with `docker compose logs cron`.
 
 ## Migrations and health

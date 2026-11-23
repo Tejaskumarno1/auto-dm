@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { appUrl } from "@/env";
 import { requireUser } from "@/server/auth/guard";
-import { safeErrorMessage } from "@/server/instagram/graph";
 import { getRequestId, logger } from "@/server/log";
 import {
   completeOAuth,
@@ -46,8 +45,9 @@ export async function GET(req: NextRequest) {
     return back(subscribed ? "connected=1" : "connected=1&warning=subscribe_failed");
   } catch (err) {
     const code = err instanceof OAuthFlowError ? err.code : "token_exchange_failed";
-    const cause = err instanceof OAuthFlowError ? err.cause : err;
-    log.warn("oauth.connect_failed", { reason: code, err: safeErrorMessage(cause) });
+    // Upstream OAuth errors are deliberately not persisted to logs: error payloads can contain
+    // provider details that should remain private. Keep only our stable, non-secret reason code.
+    log.warn("oauth.connect_failed", { reason: code });
     return back(`error=${code}`);
   }
 }

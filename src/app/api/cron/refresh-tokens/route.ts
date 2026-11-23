@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const rootLog = logger("cron");
 
-/** Deletes comment records past the configured retention. Never throws: a purge failure must not fail the token refresh. */
+/** Deletes comment records past the configured retention. Never throws: a purge failure must not fail maintenance. */
 async function purgeExpired(log: ReturnType<typeof logger>): Promise<number | null> {
   try {
     const days = (await getSetting("processing.retentionDays")) ?? 365;
@@ -27,7 +27,8 @@ async function purgeExpired(log: ReturnType<typeof logger>): Promise<number | nu
 }
 
 /**
- * Daily long-lived token refresh (Vercel Cron).
+ * Daily maintenance (Vercel Cron). Unified Login non-expiring SUATs are not refreshed here;
+ * the route keeps retention cleanup scheduled and returns the token lifecycle outcome.
  *
  * Auth: Vercel Cron sends `Authorization: Bearer $CRON_SECRET` when the `CRON_SECRET` env var is
  * set (https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs). Headers such as
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
         throw new AppError("UNAUTHORIZED", "Invalid cron secret");
       }
     } else if (NODE_ENV === "production") {
-      throw new AppError("NOT_CONFIGURED", "Set CRON_SECRET to enable the token refresh cron");
+      throw new AppError("NOT_CONFIGURED", "Set CRON_SECRET to enable the daily maintenance cron");
     }
 
     const account = await getActiveAccount();

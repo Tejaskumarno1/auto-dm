@@ -89,9 +89,10 @@ export const saveMetaAppAction = authedAction(
   "settings",
   "save_meta_app",
   metaAppSchema,
-  async ({ appId, appSecret }) => {
+  async ({ appId, appSecret, configId }) => {
     await setSetting("meta.appId", appId);
     if (appSecret) await setSetting("meta.appSecret", appSecret);
+    await setSetting("meta.configId", configId);
     log.info("meta_app.saved", { secretUpdated: !!appSecret });
     revalidatePath("/settings");
     revalidatePath("/dashboard");
@@ -133,7 +134,7 @@ export const disconnectInstagramAction = authedAction(
   },
 );
 
-/** Calls `POST /me/subscribed_apps?subscribed_fields=comments,messaging_postbacks` again and stores the outcome. */
+/** Repeats the Instagram account webhook subscription and stores the outcome. */
 export const resubscribeWebhooksAction = authedAction(
   "settings",
   "resubscribe_webhooks",
@@ -143,7 +144,7 @@ export const resubscribeWebhooksAction = authedAction(
     if (!account || !account.accessTokenEnc) {
       throw new AppError("NOT_CONFIGURED", "Connect an Instagram account first.");
     }
-    const status = await subscribeAndRecord(getAccessToken(account), "manual");
+    const status = await subscribeAndRecord(getAccessToken(account), account.igUserId, "manual");
     revalidatePath("/settings");
     if (!status.ok) {
       return fail(

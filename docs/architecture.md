@@ -6,7 +6,7 @@
 src/app/            routes only: (auth), (dashboard), api/
 src/server/db/      Drizzle schema + client; retry.ts retries reads once on dropped connections
 src/server/auth/    argon2id, jose session cookie, requireUser()
-src/server/instagram/  Graph API client, OAuth, token refresh, media listing
+src/server/instagram/  Graph API client, Unified Login OAuth, account tokens, media listing
 src/server/engine/  matching, templating, once-per-user, delivery pipeline
 src/server/repos/   data access for the UI
 src/server/n8n/     workflow generator
@@ -62,8 +62,9 @@ date window, active) -> match rule by priority -> once-per-user check -> public 
 **n8n mode**: n8n receives Meta's webhook, then `POST /api/v1/n8n/events` with `Authorization: Bearer <api key>`,
 the original raw body and original `X-Hub-Signature-256`. Same engine, `source = n8n`.
 
-**Token refresh**: `GET /api/cron/refresh-tokens` (Bearer `CRON_SECRET`) runs daily and refreshes
-tokens nearing expiry. **Health**: `GET /api/health`.
+**Maintenance cron**: `GET /api/cron/refresh-tokens` (Bearer `CRON_SECRET`) runs daily for retention
+cleanup. Unified Login Never-expiring SUATs are not passed to the legacy 60-day Instagram Login
+refresh endpoint. **Health**: `GET /api/health`.
 
 **Recovery**: read paths retry once on connection-level errors (`withDbRetry`); error boundaries
 re-render once, and reload once on version skew after a deploy (`src/lib/error-recovery.ts`,

@@ -17,7 +17,7 @@ const INCLUDED = [
   "Unlimited campaigns, rules and keywords",
   "Unlimited comments, replies and DMs (within Meta's limits)",
   "Activity log, analytics and CSV export",
-  "Encrypted secrets and automatic token refresh",
+  "Encrypted Meta secrets and Unified Login tokens",
   "Optional n8n relay",
   "All future updates, under the MIT license",
 ] as const;

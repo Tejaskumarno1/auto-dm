@@ -17,12 +17,14 @@ import { settings } from "./db/schema";
  * encrypted at rest and never sent to the browser (use `getPublicSettings` for UI).
  */
 export const SETTINGS = {
-  /** Instagram app (Meta developer dashboard -> Instagram -> API setup with Instagram login). */
+  /** Meta app used for Instagram API with Unified Login. */
   "meta.appId": { schema: z.string().regex(/^\d{5,25}$/, "Must be a numeric app id"), secret: false },
   "meta.appSecret": { schema: z.string().min(16).max(128), secret: true },
+  /** Facebook Login for Business configuration selected in Meta's Unified Login setup. */
+  "meta.configId": { schema: z.string().regex(/^\d{5,30}$/, "Must be a numeric configuration id"), secret: false },
   /** Token Meta echoes back when verifying the webhook subscription. Auto-generated. */
   "webhook.verifyToken": { schema: z.string().min(16).max(128), secret: true },
-  /** Result of the last `POST /me/subscribed_apps` (Connect or "Re-subscribe webhooks"). Diagnostics only. */
+  /** Result of the last Instagram account `/subscribed_apps` call (Connect or manual retry). Diagnostics only. */
   "webhook.subscription": {
     schema: z.object({
       ok: z.boolean(),

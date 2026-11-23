@@ -37,8 +37,9 @@ Stored in the `settings` table; secret ones are encrypted. Defined in `src/serve
 | -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `meta.appId`               | no     | Numeric Meta/Instagram app id                                                                                                                                       |
 | `meta.appSecret`           | yes    | Meta app secret                                                                                                                                                     |
+| `meta.configId`            | no     | Facebook Login for Business configuration ID for Instagram API Unified Login                                                                                       |
 | `webhook.verifyToken`      | yes    | Auto-generated; paste into Meta webhook config                                                                                                                      |
-| `webhook.subscription`     | no     | Last webhook subscription result (`ok`, time, `connect`/`manual`, subscribed fields, error). Written on Connect and by Settings → Instagram → Re-subscribe webhooks |
+| `webhook.subscription`     | no     | Last account webhook subscription result (`ok`, time, `connect`/`manual`, subscribed fields, error). Written on Connect and by Settings → Instagram → Re-subscribe webhooks |
 | `processing.mode`          | no     | `webhook` (default) or `n8n`                                                                                                                                        |
 | `processing.enabled`       | no     | Kill switch (default on)                                                                                                                                            |
 | `processing.retentionDays` | no     | Days to keep comment records before the daily cron deletes them: `30`, `90`, `180`, `365` (default) or `0` = keep forever (Settings → Processing → Data retention)  |
