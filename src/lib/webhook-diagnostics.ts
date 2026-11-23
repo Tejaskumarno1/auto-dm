@@ -111,13 +111,13 @@ export function matchLabel(row: Pick<WebhookRequestSummary, "entries" | "matched
   return `${row.matchedEntries} of ${row.entries} for your account`;
 }
 
-/** Outcome of `POST /me/subscribed_apps`, persisted in the `webhook.subscription` setting. */
+/** Outcome of the Instagram account `/subscribed_apps` request, persisted in settings. */
 export interface SubscriptionStatus {
   ok: boolean;
   /** ISO timestamp. */
   at: string;
   source: "connect" | "manual";
-  /** Fields reported by `GET /me/subscribed_apps`, when it could be read. */
+  /** Fields reported by `GET /{ig-user-id}/subscribed_apps`, when it could be read. */
   fields?: string[];
   /** Short, token-free error description when `ok` is false. */
   error?: string;

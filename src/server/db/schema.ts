@@ -75,8 +75,12 @@ export const instagramAccounts = pgTable("instagram_accounts", {
   username: text("username").notNull(),
   name: text("name"),
   profilePictureUrl: text("profile_picture_url"),
-  /** Encrypted long-lived Instagram User access token. */
+  /** Encrypted Business Integration System User access token. */
   accessTokenEnc: text("access_token_enc").notNull(),
+  /** Legacy Instagram Login records require reconnecting through Unified Login. */
+  tokenType: text("token_type").notNull().default("legacy_instagram_user"),
+  clientBusinessId: text("client_business_id"),
+  configId: text("config_id"),
   tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
   tokenRefreshedAt: timestamp("token_refreshed_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),

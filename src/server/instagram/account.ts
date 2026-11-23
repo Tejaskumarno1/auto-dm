@@ -4,12 +4,8 @@ import { z } from "zod";
 import { decrypt, encrypt } from "@/server/crypto";
 import { db, retryable } from "@/server/db/client";
 import { instagramAccounts, type InstagramAccount } from "@/server/db/schema";
-import { IG_REFRESH_TOKEN_URL } from "./constants";
 import { graphId, graphRequest } from "./graph";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-/** Refresh when fewer than this many days are left (long-lived tokens last 60 days). */
-export const REFRESH_THRESHOLD_DAYS = 15;
 
 /** The connected (active) Instagram account, or `null` when none is connected. */
 export const getActiveAccount = retryable(
@@ -38,6 +34,9 @@ export interface UpsertAccountInput {
   profilePictureUrl?: string | null;
   accessToken: string;
   expiresInSeconds?: number | null;
+  tokenType: "business_integration_system_user";
+  clientBusinessId: string;
+  configId: string;
 }
 
 /**
@@ -52,8 +51,11 @@ export async function upsertAccount(input: UpsertAccountInput): Promise<Instagra
     name: input.name ?? null,
     profilePictureUrl: input.profilePictureUrl ?? null,
     accessTokenEnc: encrypt(input.accessToken),
+    tokenType: input.tokenType,
+    clientBusinessId: input.clientBusinessId,
+    configId: input.configId,
     tokenExpiresAt: input.expiresInSeconds ? new Date(now.getTime() + input.expiresInSeconds * 1000) : null,
-    tokenRefreshedAt: now,
+    tokenRefreshedAt: null,
     isActive: true,
   };
   return db.transaction(async (tx) => {
@@ -81,7 +83,7 @@ export async function disconnectAccount(): Promise<void> {
   try {
     await graphRequest({
       method: "DELETE",
-      path: "/me/subscribed_apps",
+      path: `/${encodeURIComponent(account.igUserId)}/subscribed_apps`,
       accessToken: getAccessToken(account),
       schema: z.unknown(),
       retries: 0,
@@ -143,7 +145,7 @@ export async function listMedia(opts: { limit?: number; after?: string | null } 
   if (!account) throw new Error("No Instagram account connected");
   const limit = Math.min(Math.max(Math.trunc(opts.limit ?? 24), 1), 50);
   const page = await graphRequest({
-    path: "/me/media",
+    path: `/${encodeURIComponent(account.igUserId)}/media`,
     accessToken: getAccessToken(account),
     query: {
       fields: "id,caption,media_type,media_product_type,media_url,permalink,thumbnail_url,timestamp",
@@ -168,40 +170,18 @@ export async function listMedia(opts: { limit?: number; after?: string | null } 
 
 /* ------------------------------ token refresh ------------------------------ */
 
-export const tokenResponseSchema = z.object({
-  access_token: z.string().min(1),
-  token_type: z.string().optional(),
-  expires_in: z.number().optional(),
-});
-
 export interface RefreshResult {
   refreshed: boolean;
   expiresAt: Date | null;
 }
 
 /**
- * Refreshes the long-lived token when fewer than {@link REFRESH_THRESHOLD_DAYS} days remain (or
- * the expiry is unknown, or `force`). Meta only refreshes tokens that are >= 24h old.
+ * Unified Login Business Integration System User tokens do not use Instagram Login's
+ * `ig_refresh_token` endpoint. Non-expiring tokens are left alone; expired or legacy tokens
+ * require reconnecting through Unified Login.
  */
 export async function refreshTokenIfNeeded(
   account: InstagramAccount,
-  opts: { force?: boolean; now?: Date } = {},
 ): Promise<RefreshResult> {
-  const now = opts.now ?? new Date();
-  const expiresAt = account.tokenExpiresAt;
-  const due = !expiresAt || expiresAt.getTime() - now.getTime() < REFRESH_THRESHOLD_DAYS * DAY_MS;
-  if (!opts.force && !due) return { refreshed: false, expiresAt };
-
-  const res = await graphRequest({
-    path: IG_REFRESH_TOKEN_URL,
-    query: { grant_type: "ig_refresh_token" },
-    accessToken: getAccessToken(account),
-    schema: tokenResponseSchema,
-  });
-  const newExpiresAt = res.expires_in ? new Date(now.getTime() + res.expires_in * 1000) : null;
-  await db
-    .update(instagramAccounts)
-    .set({ accessTokenEnc: encrypt(res.access_token), tokenExpiresAt: newExpiresAt, tokenRefreshedAt: now })
-    .where(eq(instagramAccounts.id, account.id));
-  return { refreshed: true, expiresAt: newExpiresAt };
+  return { refreshed: false, expiresAt: account.tokenExpiresAt };
 }

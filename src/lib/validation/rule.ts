@@ -95,6 +95,13 @@ export const ruleSchema = z
     isActive: z.boolean(),
   })
   .superRefine((v, ctx) => {
+    if (v.followGateEnabled) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["followGateEnabled"],
+        message: "Follow gate is unavailable with Unified Login until Meta support is verified",
+      });
+    }
     if (modeNeedsKeywords(v.matchMode) && v.keywords.length === 0) {
       ctx.addIssue({ code: "custom", path: ["keywords"], message: "Add at least one keyword" });
     }

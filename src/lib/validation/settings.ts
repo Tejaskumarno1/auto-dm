@@ -13,6 +13,7 @@ export const metaAppSchema = z.object({
     .refine((v) => v === "" || (v.length >= 16 && v.length <= 128), "The App Secret is 16–128 characters")
     .optional()
     .default(""),
+  configId: z.string().trim().regex(/^\d{5,30}$/, "The configuration ID is a number (5–30 digits)"),
 });
 
 export const processingSchema = z.object({

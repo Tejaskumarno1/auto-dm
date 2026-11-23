@@ -51,7 +51,7 @@ On macOS/Linux:
 
 ```bash
 openssl rand -base64 48   # -> APP_SECRET   (sessions + encryption key)
-openssl rand -hex 32      # -> CRON_SECRET  (protects the daily token refresh)
+openssl rand -hex 32      # -> CRON_SECRET  (protects daily maintenance)
 ```
 
 On Windows, or anywhere with Node.js installed:
@@ -152,30 +152,31 @@ Short version below; screenshots-level detail and explanations are in [meta-setu
 
 1. <https://developers.facebook.com/apps> → **Create app**. Any name.
 2. Use case: **Manage messaging & content on Instagram** (if not listed: **Other → Business**).
-3. In the app dashboard open **Instagram → API setup with Instagram login**. (Newer dashboards:
-   **Use cases → Manage messaging & content on Instagram → Customize → API setup with Instagram login**.)
-4. Copy the **Instagram app ID** and **Instagram app secret** shown on that page.
-5. In your app: **Settings → Instagram → Meta app** → paste them into **Instagram App ID** and
-   **Instagram App Secret** → save. The secret shows "stored encrypted".
-6. Back in Meta, same page → **3. Set up Instagram business login → Business login settings →
-   OAuth redirect URIs**: add `https://<domain>/api/instagram/oauth/callback` exactly (copy it from
-   Settings → Instagram). Save.
-7. **App roles → Roles → Add people → Instagram Tester** → your Instagram username. Then accept the
-   invite in Instagram: **Settings → Website permissions → Apps and websites → Tester invites →
-   Accept** (on the web: instagram.com → Settings → Apps and websites).
+3. In the app dashboard open **Use cases → Manage messaging & content on Instagram → Customize →
+   API setup with Unified login**.
+4. Create a Facebook Login for Business configuration with a **System-user access token (SUAT)** and
+   **Never** expiration. Add only `instagram_basic`, `instagram_manage_comments`, and
+   `instagram_manage_messages`; remove optional ad and publishing permissions.
+5. Set the configuration's Redirect URL to `https://<domain>/api/instagram/oauth/callback` exactly
+   (copy it from AutoDM → Settings → Instagram), then copy the Configuration ID.
+6. From **App settings → Basic**, copy the Meta App ID and App Secret. In AutoDM → **Settings →
+   Instagram → Meta app**, enter the App ID, Configuration ID, and App Secret. The secret shows
+   "stored encrypted".
+7. Add your Instagram account as an Instagram Tester, accept the invite in Instagram, then connect
+   it using **Settings → Instagram → Connect Instagram**.
 
 ## 8. Connect Instagram
 
 1. App → **Settings → Instagram → Instagram account → Connect Instagram**.
 2. Log in and click **Allow** for all permissions.
-3. You come back to Settings with your username and picture. The token is stored encrypted and
-   refreshed daily by the cron job (it needs `CRON_SECRET`).
+3. You come back to Settings with your username and picture. The SUAT is stored encrypted; a
+   Never-expiring token has no scheduled refresh. The daily cron handles database retention cleanup.
 
 ## 9. Connect the webhook
 
 This tells Meta where to send new comments.
 
-1. Meta → **Instagram → API setup with Instagram login → 2. Configure webhooks**.
+1. Meta → **Instagram → API setup with Unified login → Configure webhooks**.
 2. **Callback URL**: copy from app **Settings → Instagram → Webhook → Callback URL**
    (`https://<domain>/api/webhooks/instagram`).
 3. **Verify token**: copy from the same card (**Copy verify token**).
@@ -214,7 +215,7 @@ provides both:
 2. **Settings → Instagram → Meta app review** lists the URLs. Paste the **Privacy Policy URL**
    (`/privacy`), **Terms of Service URL** (`/terms`) and **Data deletion instructions URL**
    (`/data-deletion`) into Meta → **App settings → Basic**, and the **Deauthorize callback URL** and **Data deletion request URL** into
-   **Instagram → API setup with Instagram login → Business login settings**.
+   **Facebook Login for Business** settings for your Unified Login configuration.
 
 Steps and the honest state of what Meta requires:
 [meta-setup.md → Part 8](meta-setup.md#part-8---development-vs-live-mode-important).
@@ -232,7 +233,8 @@ Postgres and a cron sidecar included). See [docker.md](docker.md).
 
 `vercel.json` registers a daily call to `/api/cron/refresh-tokens` (Hobby allows one per day). Vercel
 sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set; without it the
-route refuses calls and the Instagram token expires after ~60 days.
+route refuses calls. With the selected Never-expiring Unified Login SUAT, the cron does not refresh
+the access token; it still runs database retention cleanup.
 
 ### Custom domain
 

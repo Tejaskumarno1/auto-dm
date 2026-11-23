@@ -47,7 +47,7 @@ into n8n.
 - **Check for missed comments**: re-read the last 7 days of a campaign post's comments from Instagram and list any whose webhook never arrived (nothing is sent automatically).
 - **Kill switch** to pause all sending instantly.
 - **Encrypted secrets** (AES-256-GCM): tokens and the Meta app secret are never stored in plain text.
-- **Automatic token refresh** (daily cron), so the 60-day Instagram token never expires on you.
+- **Unified Login token handling**: stores the Business Integration System User token encrypted and does not run the old 60-day Instagram Login refresh flow.
 - **Optional n8n relay** if you want to extend flows with your own nodes.
 - Accessible, responsive UI with dark mode ([ACCESSIBILITY.md](ACCESSIBILITY.md)).
 
@@ -184,7 +184,7 @@ Full reference: [docs/configuration.md](docs/configuration.md).
 
 **Is it really free and unlimited?** The software has no fees or contact limits. Limits come from Meta (rate limits, one private reply per comment within 7 days) and your hosting tier. See [Is it free & unlimited?](docs/meta-setup.md#is-it-free-and-unlimited).
 
-**Do I need a Facebook Page?** No. It uses _Instagram API with Instagram Login_ and a professional (Business or Creator) account.
+**Do I need a Facebook Page?** No. It uses _Instagram API with Unified Login_ and a professional (Business or Creator) account. Meta requires a business portfolio for Unified Login.
 
 **Do I need Meta App Review?** For your own account, Standard Access is the intended path. Whether public comments reach the webhook in Live mode without Advanced Access is not confirmed by Meta's docs, so test it. See [meta-setup.md](docs/meta-setup.md#standard-vs-advanced-access---do-i-need-app-review).
 

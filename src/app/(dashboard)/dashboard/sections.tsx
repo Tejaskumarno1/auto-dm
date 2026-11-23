@@ -43,7 +43,7 @@ export async function SetupSection({ state }: { state: Promise<SetupState> }) {
   const steps = [
     {
       title: "Add your Meta app credentials",
-      description: "Paste the Instagram App ID and App Secret from the Meta developer dashboard.",
+      description: "Paste the Meta App ID, App Secret, and Unified Login configuration ID.",
       done: s.credentials,
       href: "/settings?tab=instagram",
       cta: "Open Instagram settings",

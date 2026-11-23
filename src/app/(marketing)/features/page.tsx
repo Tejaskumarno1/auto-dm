@@ -120,8 +120,8 @@ const SAFETY = [
   },
   {
     icon: RefreshCw,
-    title: "Automatic token refresh",
-    body: "A daily job renews the ~60-day Instagram token so it does not expire on you.",
+    title: "Unified Login token storage",
+    body: "Stores the Unified Login system-user access token encrypted; reconnect if Meta revokes access.",
   },
   {
     icon: Trash2,
